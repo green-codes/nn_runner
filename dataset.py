@@ -44,18 +44,23 @@ class SimpleDataset(torch.utils.data.Dataset):
     """
 
     def __init__(self, x_file, y_file=None, x_transform=None, y_transform=None,
-                 use_cache=False):
+                 use_cache=False, x_path_prefix=None, y_path_prefix=None):
         """
         Parameters
         - x_file: input data file, or text file w/list of paths
         - y_file: label data file, or text file w/list of paths
         - x_transform: callable preprocessor for x
         - y_transform: callable preprocessor for y
+        - use_cache: whether to cache loaded data in memory
+        - x_path_prefix: path prefix to x data files
+        - y_path_prefix: path prefix to y data files
         """
 
         self.x_transform = x_transform
         self.y_transform = y_transform
         self.use_cache = use_cache
+        self.x_path_prefix = x_path_prefix
+        self.y_path_prefix = y_path_prefix
         self.cache_dict = {}
 
         # read x file
@@ -67,7 +72,7 @@ class SimpleDataset(torch.utils.data.Dataset):
             self.x_arr = self._load_csv(x_file)
         else:
             with open(x_file, 'r') as f:
-                self.x_arr = f.readlines()
+                self.x_arr = [e.strip() for e in f.readlines()]
 
         # read y file
         if y_file is not None:
@@ -79,7 +84,7 @@ class SimpleDataset(torch.utils.data.Dataset):
                 self.y_arr = self._load_csv(y_file)
             else:
                 with open(y_file, 'r') as f:
-                    self.y_arr = f.readlines()
+                    self.y_arr = [e.strip() for e in f.readlines()]
             assert len(self.x_arr) == len(self.y_arr)  # sanity check
         else:
             self.y_arr = None
@@ -92,31 +97,35 @@ class SimpleDataset(torch.utils.data.Dataset):
             return self.cache_dict[index]
 
         x = self.x_arr[index]
-        if isinstance(x, str) and os.path.exists(x):  # load from file
-            x = x.strip()
-            if ".npy" in x:
-                x = self._load_numpy(x)
-            elif ".pkl" in x:  # pickle file, assume ndarray
-                x = self._load_pickle(x)
-            elif ".csv" in x:
-                x = self._load_csv(x)
-            else:            # assume file in image format
-                x = np.array(imageio.imread(x))
+        if isinstance(x, str):
+            if self.x_path_prefix:  # now assume that x is a path
+                x = os.path.join(self.x_path_prefix, x)
+            if os.path.exists(x):  # load from file
+                if ".npy" in x:
+                    x = self._load_numpy(x)
+                elif ".pkl" in x:  # pickle file, assume ndarray
+                    x = self._load_pickle(x)
+                elif ".csv" in x:
+                    x = self._load_csv(x)
+                else:              # assume file in image format
+                    x = np.array(imageio.imread(x))
         if self.x_transform is not None:
             x = self.x_transform(x)
 
         if self.y_arr is not None:
             y = self.y_arr[index]
-            if isinstance(y, str) and os.path.exists(y):  # load from file
-                y = y.strip()
-                if ".npy" in y:
-                    y = self._load_numpy(y)
-                elif ".pkl" in y:  # pickle file, assume ndarray
-                    y = self._load_pickle(y)
-                elif ".csv" in y:
-                    y = self._load_csv(y)
-                else:            # assume file in image format
-                    y = np.array(imageio.imread(y))
+            if isinstance(y, str):  # load from file
+                if self.y_path_prefix:
+                    y = os.path.join(self.y_path_prefix, y)
+                if os.path.exists(y):
+                    if ".npy" in y:
+                        y = self._load_numpy(y)
+                    elif ".pkl" in y:  # pickle file, assume ndarray
+                        y = self._load_pickle(y)
+                    elif ".csv" in y:
+                        y = self._load_csv(y)
+                    else:            # assume file in image format
+                        y = np.array(imageio.imread(y))
             if self.y_transform is not None:
                 y = self.y_transform(y)
             if self.use_cache:

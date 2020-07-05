@@ -22,7 +22,7 @@ class MultiProcessor:
 
         # process manager for progress reports and results
         self.manager = multiprocessing.Manager()
-        self.stats = self.manager.dict()  # shared dict for progress report
+        self.stats = self.manager.dict()  # shared dict for progress reports
         self.res = self.manager.dict()    # shared dict for returned results
 
         # create processes
