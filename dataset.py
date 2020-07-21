@@ -3,7 +3,7 @@ import torch
 import numpy as np
 import os
 import pickle
-import imageio
+import cv2
 import gzip
 import random
 import csv
@@ -17,7 +17,7 @@ class SimpleDataset(torch.utils.data.Dataset):
     This class currently supports reading npy, pkl, and csv data files
     directly. Gzip compressed archives are supported. If provided with lists
     of data file paths, this class can also read all image formats supported
-    by imageio at load time.  
+    by OpenCV (cv2) at load time.  
 
     If caching is enabled, the dataset attempts to save all read (and 
     optionally preprocessed) data in system memory, which may cause out of
@@ -108,7 +108,7 @@ class SimpleDataset(torch.utils.data.Dataset):
                 elif ".csv" in x:
                     x = self._load_csv(x)
                 else:              # assume file in image format
-                    x = np.array(imageio.imread(x))
+                    x = cv2.imread(x)
         if self.x_transform is not None:
             x = self.x_transform(x)
 
@@ -125,7 +125,7 @@ class SimpleDataset(torch.utils.data.Dataset):
                     elif ".csv" in y:
                         y = self._load_csv(y)
                     else:            # assume file in image format
-                        y = np.array(imageio.imread(y))
+                        y = cv2.imread(y)
             if self.y_transform is not None:
                 y = self.y_transform(y)
             if self.use_cache:

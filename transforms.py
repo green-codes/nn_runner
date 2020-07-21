@@ -298,6 +298,22 @@ class ExpandDims(object):
             return torch.unsqueeze(x, self.dim)
         else:
             raise NotImplementedError
+            
+
+class ToTorchFormat(object):
+    
+    def __init__(self, input_format):
+        self.input_format = input_format
+        
+    def __call__(self, x):
+        assert isinstance(x, np.ndarray), "Expected numpy.ndarray"
+        if self.input_format == "HW":
+            x = np.expand_dims(x, axis=0)
+        elif self.input_format == "HWC":
+            x = np.transpose(x, axes=(2, 0, 1))
+        else:
+            raise NotImplementedError
+        return x
 
 
 class ToTensor(object):

@@ -18,7 +18,6 @@ class MultiProcessor:
         assert isinstance(arr, list)
         s_len = (len(arr) // num_workers) + int(len(arr) % num_workers > 0)
         self.s_arr = [arr[i*s_len:(i+1)*s_len] for i in range(num_workers)]
-        print(s_len)
 
         # process manager for progress reports and results
         self.manager = multiprocessing.Manager()
@@ -30,11 +29,16 @@ class MultiProcessor:
             target=MultiProcessor._transform_runner,
             args=(transform, self.s_arr[i], self.stats, self.res, i))
             for i in range(num_workers)]
+        
+        # init trackers
+        for i in range(len(self.p_arr)):
+            self.res[i] = list()
+            self.stats[i] = 0
+            
 
     def run(self):
         """ Start all processes """
         for i, p in enumerate(self.p_arr):
-            self.stats[i] = 0
             p.start()
 
     def join(self):
@@ -52,6 +56,10 @@ class MultiProcessor:
         stats = [(self.stats[i], len(self.s_arr[i]))
                  for i in range(len(self.p_arr))]
         return stats
+    
+    def is_complete(self):
+        return all([self.stats[i] == len(self.s_arr[i])
+                    for i in range(len(self.p_arr))])
 
     def get_pids(self):
         return [p.pid for p in self.p_arr]
@@ -59,9 +67,5 @@ class MultiProcessor:
     @staticmethod
     def _transform_runner(transform, arr, stats, res, i):
         for j, e in enumerate(arr):
-            ret = transform(e)
-            if i in res:
-                res[i] += [ret]  # do transform & record results
-            else:
-                res[i] = [ret]
+            res[i] += [transform(e)]  # do transform & record results
             stats[i] = j + 1    # report progress
